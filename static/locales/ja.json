@@ -1153,7 +1153,7 @@
             "select": "選択",
             "defaultClickAnim": "デフォルトクリックアニメーション"
         },
-        "emotionConfig": "表情設定",
+        "emotionConfig": "表情",
         "saveSettings": "設定を保存",
         "persistentExpression": "常時表情（表情のみ）:",
         "pleaseLoadModel": "モデルを読み込んでください",
@@ -1161,8 +1161,8 @@
         "delete": "削除",
         "savePersistent": "常時表情を保存",
         "persistentHint": "常時表情は常に有効になります。",
-        "backToMain": "メインに戻る",
-        "importModel": "モデルをインポート",
+        "backToMain": "ホーム",
+        "importModel": "モデル取込",
         "motionPreview": "モーションプレビュー",
         "expressionPreview": "表情プレビュー",
         "play": "再生",
@@ -1217,7 +1217,7 @@
         "exitFullscreen": "全画面終了",
         "modelType": "モデルタイプ",
         "selectLive2DModel": "Live2Dモデル選択",
-        "selectVRMModel": "VRMモデル選択",
+        "selectVRMModel": "VRMモデル",
         "selectVRMFile": "VRMファイル選択",
         "vrmModelListLoaded": "VRMモデルリスト読み込み成功",
         "noVRMModelsFound": "利用可能なVRMモデルなし",
@@ -1251,7 +1251,7 @@
             "speed": "速度:"
         },
         "mmdModel": {
-            "selectModel": "MMDモデルを選択",
+            "selectModel": "MMDモデル",
             "deleteModel": "インポート済みMMDモデルを削除",
             "deleteModelTitle": "インポート済みMMDモデルを削除",
             "deleteWarning": "以下はすべてのインポート済みユーザーMMDモデルです。削除するモデルを選択してください（モデルフォルダとテクスチャも削除されます）。",
@@ -1260,10 +1260,10 @@
             "deleteSelected": "選択を削除"
         },
         "mmdAnimation": {
-            "selectAnimation": "VMDアニメーションを選択",
+            "selectAnimation": "VMD選択",
             "noAnimation": "アニメーションなし",
             "play": "再生",
-            "uploadAnimation": "VMDアニメーションをインポート",
+            "uploadAnimation": "VMD取込",
             "deleteAnimation": "VMDアニメーションを削除",
             "deleteAnimationTitle": "インポート済みVMDアニメーションを削除",
             "deleteAnimationWarning": "以下はすべてのインポート済みユーザーVMDアニメーションファイルです。削除するアニメーションを選択してください。",
@@ -1322,7 +1322,7 @@
         },
         "loadError": "エラー: {{error}}",
         "parameterEditor": {
-            "title": "フェイスエディタ",
+            "title": "顔編集",
             "backToMain": "← L2D設定に戻る",
             "backToL2DManager": "戻る",
             "selectModel": "モデル選択",
