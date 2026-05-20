@@ -56,7 +56,7 @@
         "message": "Ele estará pronto automaticamente na próxima vez que você ligar o computador, portanto não será necessário iniciá-lo manualmente.",
         "note": "Isso só permite a inicialização no login do usuário atual e você pode desativá-lo mais tarde.",
         "startNow": "Ativar inicialização automática",
-        "later": "Talvez mais tarde",
+        "later": "Lembrar mais tarde",
         "never": "Não me lembre",
         "enableFailed": "Não foi possível ativar a inicialização automática no momento. Por favor, tente novamente mais tarde.",
         "requiresApproval": "Aprove primeiro o início automático nas configurações do sistema. Entrará em vigor após aprovação."

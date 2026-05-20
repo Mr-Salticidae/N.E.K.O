@@ -56,7 +56,7 @@
         "message": "Estará listo automáticamente la próxima vez que encienda su computadora, por lo que no necesitará iniciarlo manualmente.",
         "note": "Esto solo permite el inicio al iniciar sesión para el usuario actual y puede desactivarlo más tarde.",
         "startNow": "Habilitar el inicio automático",
-        "later": "tal vez más tarde",
+        "later": "Recordármelo más tarde",
         "never": "no me lo recuerdes",
         "enableFailed": "El inicio automático no se pudo habilitar en este momento. Inténtelo de nuevo más tarde.",
         "requiresApproval": "Primero apruebe el inicio automático en la configuración de su sistema. Entrará en vigor después de la aprobación."

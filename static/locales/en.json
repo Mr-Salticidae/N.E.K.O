@@ -56,7 +56,7 @@
         "message": "It will be ready automatically the next time you turn on your computer, so you won't need to launch it manually.",
         "note": "This only enables launch at login for the current user, and you can turn it off later.",
         "startNow": "Enable auto launch",
-        "later": "Maybe later",
+        "later": "Remind me later",
         "never": "Don't remind me",
         "enableFailed": "Auto launch couldn't be enabled right now. Please try again later.",
         "requiresApproval": "Approve auto launch in your system settings first. It will take effect after approval."
