@@ -310,11 +310,12 @@ function isDesktopCompactSurfaceLayoutActive(): boolean {
 }
 
 function readPersistedCompactExportHistoryOpen(): boolean {
-  if (typeof window === 'undefined') return false;
+  if (typeof window === 'undefined') return true;
   try {
-    return window.localStorage?.getItem(COMPACT_EXPORT_HISTORY_OPEN_STORAGE_KEY) === 'true';
+    const persisted = window.localStorage?.getItem(COMPACT_EXPORT_HISTORY_OPEN_STORAGE_KEY);
+    return persisted === null ? true : persisted === 'true';
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -556,6 +557,7 @@ const compactCursorZoneSelector = [
   '.compact-input-tool-fan',
   '.compact-input-tool-toggle',
   '.compact-export-history-anchor',
+  '.compact-history-visibility-handle',
   '.send-button-circle',
   '.window-topbar-actions',
   '.topbar-action-btn',
@@ -1190,10 +1192,12 @@ export default function App({
   const [compactInputToolWheelChargeReleaseActive, setCompactInputToolWheelChargeReleaseActive] = useState(false);
   const [compactSurfaceResizeWidth, setCompactSurfaceResizeWidth] = useState<number | null>(null);
   const [compactExportHistoryOpen, setCompactExportHistoryOpen] = useState(readPersistedCompactExportHistoryOpen);
+  const [compactExportControlsOpen, setCompactExportControlsOpen] = useState(false);
   const [compactExportPreviewOpen, setCompactExportPreviewOpen] = useState(false);
   const [compactExportSelectedIds, setCompactExportSelectedIds] = useState<Set<string>>(() => new Set());
   const [compactExportAutoScrollToBottom, setCompactExportAutoScrollToBottom] = useState(true);
   const compactSurfaceResizeStateRef = useRef<CompactSurfaceResizeState | null>(null);
+  const compactHistoryVisibilitySuppressClickRef = useRef(false);
   const submittingRef = useRef(false);
   const lastRollbackKeyRef = useRef('');
   const lastToolCursorResetKeyRef = useRef('');
@@ -1318,7 +1322,13 @@ export default function App({
   const resolvedScreenshotAriaLabel = screenshotButtonAriaLabel || screenshotButtonLabel;
   const resolvedTranslateAriaLabel = translateButtonAriaLabel || translateButtonLabel;
   const resolvedGalgameAriaLabel = galgameToggleButtonAriaLabel || galgameToggleButtonLabel;
-  const compactExportHistoryButtonLabel = i18n('chat.compactExportHistory', 'History');
+  const compactExportControlsVisible = compactExportHistoryOpen && compactExportControlsOpen;
+  const compactExportHistoryToggleLabel = compactExportHistoryOpen
+    ? i18n('chat.compactHistoryToggleClose', 'Hide history')
+    : i18n('chat.compactHistoryToggleOpen', 'Show history');
+  const compactExportControlsButtonLabel = compactExportControlsVisible
+    ? i18n('chat.compactHistoryControlsHide', 'Hide history actions')
+    : i18n('chat.compactHistoryControlsShow', 'Show history actions');
   // ChoicePrompt and galgame options share the same composer-anchored slot.
   // The transient invite should win when both are present so we do not stack
   // two button groups in the same compact surface.
@@ -1410,18 +1420,60 @@ export default function App({
     [compactExportSelectableMessages],
   );
   const compactExportSelectableCount = compactExportSelectableMessages.length;
-  const handleCompactExportConversationClick = useCallback(() => {
-    setCompactExportHistoryOpen((open) => {
-      const nextOpen = !open;
-      persistCompactExportHistoryOpen(nextOpen);
-      if (nextOpen) {
-        setCompactExportAutoScrollToBottom(true);
-      } else {
-        setCompactExportPreviewOpen(false);
-      }
-      return nextOpen;
-    });
+  const openCompactExportHistory = useCallback(() => {
+    setCompactExportHistoryOpen(true);
+    persistCompactExportHistoryOpen(true);
+    setCompactExportAutoScrollToBottom(true);
   }, []);
+  const closeCompactExportHistory = useCallback(() => {
+    setCompactExportHistoryOpen(false);
+    persistCompactExportHistoryOpen(false);
+    setCompactExportPreviewOpen(false);
+  }, []);
+  const handleCompactHistoryVisibilityToggle = useCallback(() => {
+    if (compactExportHistoryOpen) {
+      closeCompactExportHistory();
+      return;
+    }
+    openCompactExportHistory();
+  }, [closeCompactExportHistory, compactExportHistoryOpen, openCompactExportHistory]);
+  const handleCompactHistoryVisibilityPress = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    compactHistoryVisibilitySuppressClickRef.current = true;
+    handleCompactHistoryVisibilityToggle();
+  }, [handleCompactHistoryVisibilityToggle]);
+  const handleCompactHistoryVisibilityClick = useCallback((event: ReactMouseEvent<HTMLButtonElement>) => {
+    if (compactHistoryVisibilitySuppressClickRef.current) {
+      compactHistoryVisibilitySuppressClickRef.current = false;
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    handleCompactHistoryVisibilityToggle();
+  }, [handleCompactHistoryVisibilityToggle]);
+  const handleCompactHistoryVisibilityPointerCancel = useCallback(() => {
+    compactHistoryVisibilitySuppressClickRef.current = false;
+  }, []);
+  const handleCompactExportControlsToggle = useCallback(() => {
+    if (!compactExportHistoryOpen) {
+      openCompactExportHistory();
+      setCompactExportControlsOpen(true);
+      return;
+    }
+    if (compactExportPreviewOpen) {
+      setCompactExportPreviewOpen(false);
+      setCompactExportControlsOpen(true);
+      return;
+    }
+    setCompactExportControlsOpen((open) => {
+      if (open) {
+        setCompactExportSelectedIds(prev => (prev.size === 0 ? prev : new Set()));
+      }
+      return !open;
+    });
+  }, [compactExportHistoryOpen, compactExportPreviewOpen, openCompactExportHistory]);
   const handleCompactExportToggleMessage = useCallback((messageId: string) => {
     if (!compactExportSelectableIds.has(messageId)) return;
     setCompactExportSelectedIds((prev) => {
@@ -1505,6 +1557,7 @@ export default function App({
     setCompactExportPreviewOpen(false);
     setCompactExportSelectedIds(prev => (prev.size === 0 ? prev : new Set()));
     setCompactExportAutoScrollToBottom(true);
+    setCompactExportControlsOpen(false);
   }, [isCompactSurface]);
 
   useEffect(() => {
@@ -3053,7 +3106,6 @@ export default function App({
     if (!options?.ignoreToolFan && compactInputToolFanOpen) return;
     if (draftRef.current.trim().length > 0) return;
     if (composerAttachments.length > 0) return;
-    if (!options?.ignoreFocusedShell && compactExportHistoryOpen) return;
     const activeElement = document.activeElement;
     if (
       !options?.ignoreFocusedShell
@@ -3062,7 +3114,7 @@ export default function App({
         !!compactInputShellRef.current?.contains(activeElement)
         || (
           activeElement instanceof Element
-          && !!activeElement.closest('.compact-export-history-anchor')
+          && !!activeElement.closest('.compact-export-history-anchor, .compact-history-visibility-handle')
         )
       )
     ) {
@@ -3071,7 +3123,6 @@ export default function App({
     requestCompactChatState('default');
   }, [
     compactInputToolFanOpen,
-    compactExportHistoryOpen,
     composerAttachments.length,
     effectiveCompactChatState,
     isCompactSurface,
@@ -3102,7 +3153,7 @@ export default function App({
         || !!compactChoiceLayerRef.current?.contains(target)
         || (
           target instanceof Element
-          && !!target.closest('.compact-export-history-anchor')
+          && !!target.closest('.compact-export-history-anchor, .compact-history-visibility-handle')
         )
       )
     );
@@ -4235,17 +4286,17 @@ export default function App({
         <img src="/static/icons/jukebox_icon.png" alt="" aria-hidden="true" />
       </button>
       <button
-        className={`composer-tool-btn compact-input-tool-item compact-input-tool-item-export${compactExportHistoryOpen ? ' is-active' : ''}`}
+        className={`composer-tool-btn compact-input-tool-item compact-input-tool-item-export${compactExportControlsVisible ? ' is-active' : ''}`}
         type="button"
-        aria-label={compactExportHistoryButtonLabel}
-        aria-pressed={compactExportHistoryOpen}
-        title={compactExportHistoryButtonLabel}
+        aria-label={compactExportControlsButtonLabel}
+        aria-pressed={compactExportControlsVisible}
+        title={compactExportControlsButtonLabel}
         disabled={compactInputToolFanActionsDisabled}
         tabIndex={getCompactToolWheelTabIndex(5)}
         aria-hidden={getCompactToolWheelAriaHidden(5)}
         data-compact-tool-wheel-slot={getCompactToolWheelSlotValue(5)}
-        data-compact-tool-active={compactExportHistoryOpen ? 'true' : 'false'}
-        onClick={compactFanRunAction(handleCompactExportConversationClick)}
+        data-compact-tool-active={compactExportControlsVisible ? 'true' : 'false'}
+        onClick={compactFanRunAction(handleCompactExportControlsToggle)}
       >
         <svg viewBox="0 0 1024 1024" width="24" height="24" fill="currentColor" aria-hidden="true">
           <path d="M855.467 501.333c-17.067 0-32 14.934-32 32v198.4c0 70.4-59.734 130.134-130.134 130.134H356.267c-83.2 0-151.467-66.134-151.467-149.334V358.4c0-64 53.333-117.333 117.333-117.333h168.534c17.066 0 32-14.934 32-32s-14.934-32-32-32H322.133c-100.266 0-181.333 81.066-181.333 181.333v352c0 117.333 96 213.333 215.467 213.333h337.066c106.667 0 194.134-87.466 194.134-194.133V533.333c0-17.066-14.934-32-32-32zM680.533 256H761.6L458.667 569.6A30.933 30.933 0 0 0 480 622.933c8.533 0 17.067-4.266 23.467-10.666l305.066-313.6v89.6c0 17.066 14.934 32 32 32s32-14.934 32-32v-147.2c0-27.734-23.466-51.2-51.2-51.2h-140.8c-17.066 0-32 14.933-32 32s14.934 34.133 32 34.133z" />
@@ -4498,6 +4549,7 @@ export default function App({
       selectableCount={compactExportSelectableCount}
       autoScrollToBottom={compactExportAutoScrollToBottom}
       previewOpen={compactExportPreviewOpen}
+      controlsOpen={compactExportControlsOpen}
       choiceLayerAbove={compactChoiceLayerOpen && compactChoiceLayerPlacement === 'above'}
       failedStatusLabel={failedStatusLabel}
       onAutoScrollToBottomChange={setCompactExportAutoScrollToBottom}
@@ -4516,6 +4568,24 @@ export default function App({
     />
   ) : null;
   const compactExportHistoryNode = compactExportHistoryElement;
+  const compactHistoryVisibilityHandleNode = isCompactSurface ? (
+    <button
+      className={`compact-history-visibility-handle${compactExportHistoryOpen ? ' is-open' : ''}`}
+      type="button"
+      aria-label={compactExportHistoryToggleLabel}
+      aria-expanded={compactExportHistoryOpen}
+      title={compactExportHistoryToggleLabel}
+      data-compact-geometry-owner="surface"
+      data-compact-geometry-item="historyHandle"
+      data-compact-history-open={compactExportHistoryOpen ? 'true' : 'false'}
+      onPointerDown={handleCompactHistoryVisibilityPress}
+      onPointerCancel={handleCompactHistoryVisibilityPointerCancel}
+      onPointerLeave={handleCompactHistoryVisibilityPointerCancel}
+      onClick={handleCompactHistoryVisibilityClick}
+    >
+      <span className="compact-history-visibility-handle-triangle" aria-hidden="true" />
+    </button>
+  ) : null;
   const compactSurfaceShellStyle = isCompactSurface
     && compactSurfaceEffectiveWidth !== null
     && !isDesktopCompactSurfaceLayoutActive()
@@ -4550,11 +4620,13 @@ export default function App({
       data-chat-surface-mode={chatSurfaceMode}
       data-compact-chat-state={effectiveCompactChatState}
       data-compact-export-history-open={isCompactSurface && compactExportHistoryOpen ? 'true' : 'false'}
+      data-compact-export-controls-open={isCompactSurface && compactExportControlsVisible ? 'true' : 'false'}
       data-compact-export-preview-open={isCompactSurface && compactExportPreviewOpen ? 'true' : 'false'}
       data-compact-export-selected-count={isCompactSurface ? compactExportSelectedCount : 0}
       data-compact-export-auto-scroll={isCompactSurface && compactExportAutoScrollToBottom ? 'true' : 'false'}
     >
       {compactExportHistoryNode}
+      {compactHistoryVisibilityHandleNode}
       {compactChoiceLayerNode}
       {floatingFistDrops.map(drop => (
         <span
