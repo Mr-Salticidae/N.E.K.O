@@ -2639,6 +2639,33 @@ class OmniRealtimeClient:
                     else:
                         self._last_response_transcript = ""
                         print(f"OmniRealtimeClient: response.done - 没有转录文本 | audio_deltas={self._audio_delta_count}")
+                    # [有声无字兜底] 部分 provider（如 lanlan.app Gemini 语音代理）只发
+                    # response.audio_transcript.delta、从不发 response.audio_transcript.done，
+                    # 输出转录全靠下面 streaming 分支（_print_input_transcript=True）实时送出。
+                    # 但带工具调用的一轮里，工具调用那一轮的 response.done 会把
+                    # _print_input_transcript 置 False（见下方），紧随其后的真回复转录便走
+                    # buffer 分支累积进 _output_transcript_buffer，没有 transcript.done 来 flush，
+                    # 就在这里被直接清空 → 前端有声无字。这里在清空前补一次 flush：只要本轮真
+                    # 出过声（audio_delta_count>0）且 buffer 仍有残留就补发。streaming 分支每次都
+                    # 会清空 buffer，故正常轮此处为 no-op，不会重复发送。
+                    if (
+                        self._output_transcript_buffer
+                        and self.on_output_transcript
+                        and self._audio_delta_count > 0
+                    ):
+                        # 「有声无字」是反复出现的问题（见上方 ISSUE4b），留一条 debug
+                        # 日志方便下次诊断时确认是这条兜底生效、还是 streaming/transcript.done
+                        # 路径生效。audio_delta_count 此处尚未清零，记录的是本轮真实值。
+                        logger.debug(
+                            "response.done 兜底 flush 输出转录: buffer_len=%d audio_deltas=%d is_first=%s",
+                            len(self._output_transcript_buffer),
+                            self._audio_delta_count,
+                            self._is_first_transcript_chunk,
+                        )
+                        await self.on_output_transcript(
+                            self._output_transcript_buffer, self._is_first_transcript_chunk
+                        )
+                        self._is_first_transcript_chunk = False
                     self._audio_delta_count = 0
                     # 确保 buffer 被清空
                     self._output_transcript_buffer = ""
