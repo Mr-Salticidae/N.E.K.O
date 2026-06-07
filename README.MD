@@ -1,3 +1,24 @@
+## N.E.K.O × Maieutic Copilot 方向说明
+
+> This branch explores a hidden Socratic co-learning copilot for N.E.K.O.
+
+我们正在尝试把 **Maieutic（苏格拉底式共学 / 助产师式澄清）** 搭载进 N.E.K.O，让猫娘不只是回答问题，而是在用户学习、困惑、判断方向或迁移到创作实践时，隐性地切换成一个“聪明同桌 + 创作军师，外层一点猫娘伪装”的共学伙伴。
+
+当前 v0 的目标不是替换 N.E.K.O 原有人格，也不是把知识库当素材包灌进去，而是先通过插件方式跑通一个最小闭环：
+
+```text
+学习困惑 -> 澄清问题 -> 拆结构或轻微挑战 -> 生成 Insight -> 给出 24 小时内可做的 Beacon
+```
+
+已新增的实验插件位于：
+
+- `plugin/plugins/maieutic_copilot/`
+- `plugin/tests/unit/plugins/test_maieutic_copilot.py`
+
+开发者可以优先阅读 `maieutic_copilot` 的 `plugin.toml`、`engine.py` 和 `prompts/maieutic_v0.md`，理解这个方向的触发范围、输出结构和人格边界。下面保留原项目 README 内容，方便继续了解 N.E.K.O 本体。
+
+---
+
 <div align="center">
 
 ![Logo](assets/neko_logo.jpg)
