@@ -1,0 +1,28 @@
+[plugin]
+id = "maieutic_copilot"
+name = "Maieutic Copilot"
+description = "A hidden Socratic co-learning copilot for N.E.K.O. It helps the catgirl clarify learning confusion, connect concepts to creative practice, and produce one Insight plus one Beacon."
+short_description = "Hidden co-learning copilot for learning, creative judgment, Insight, and Beacon."
+keywords = ["maieutic", "socratic", "learning", "copilot", "insight", "beacon", "knowledge-base", "AIGC"]
+version = "0.1.0"
+type = "plugin"
+entry = "plugin.plugins.maieutic_copilot:MaieuticCopilotPlugin"
+
+[plugin.author]
+name = "Mr. Jumping Spider"
+
+[plugin.sdk]
+recommended = ">=0.1.0,<0.2.0"
+supported = ">=0.1.0,<0.3.0"
+
+[plugin_runtime]
+enabled = true
+auto_start = false
+
+[plugin.store]
+enabled = false
+
+[maieutic]
+language = "zh-CN"
+knowledge_base_root = "D:/AIGC工作站/知识库"
+push_on_message = true
