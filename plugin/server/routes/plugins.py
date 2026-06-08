@@ -4,9 +4,11 @@
 from typing import Optional
 
 from fastapi import APIRouter, Query
+from pydantic import BaseModel, Field
 
 from plugin.logging_config import get_logger
 from plugin.server.application.plugins import (
+    PluginDispatchService,
     PluginLifecycleService,
     PluginQueryService,
     PluginRegistryService,
@@ -20,6 +22,12 @@ logger = get_logger("server.routes.plugins")
 query_service = PluginQueryService()
 lifecycle_service = PluginLifecycleService()
 registry_service = PluginRegistryService()
+dispatch_service = PluginDispatchService()
+
+
+class PluginMessageDispatchPayload(BaseModel):
+    args: dict[str, object] = Field(default_factory=dict)
+    timeout: float = 3.0
 
 
 @router.get("/plugin/status")
@@ -34,6 +42,14 @@ async def plugin_status(plugin_id: Optional[str] = Query(default=None)) -> dict[
 async def list_plugins(locale: Optional[str] = Query(default=None)) -> dict[str, object]:
     try:
         return await query_service.list_plugins(locale=locale)
+    except ServerDomainError as error:
+        raise_http_from_domain(error, logger=logger)
+
+
+@router.post("/plugins/messages/dispatch")
+async def dispatch_plugin_message_consumers(payload: PluginMessageDispatchPayload) -> dict[str, object]:
+    try:
+        return await dispatch_service.dispatch_message(args=payload.args, timeout=payload.timeout)
     except ServerDomainError as error:
         raise_http_from_domain(error, logger=logger)
 

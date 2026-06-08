@@ -32,6 +32,27 @@ class PluginDispatchHostContract(Protocol):
     ) -> object: ...
 
 
+def _iter_message_consumers() -> list[tuple[str, str]]:
+    handlers_snapshot = state.get_event_handlers_snapshot_cached(timeout=1.0)
+    consumers: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for event_key_obj in handlers_snapshot:
+        if not isinstance(event_key_obj, str):
+            continue
+        parts = event_key_obj.split(":", 2)
+        if len(parts) != 3:
+            continue
+        plugin_id, event_type, event_id = parts
+        if not plugin_id or event_type != "message" or not event_id:
+            continue
+        item = (plugin_id, event_id)
+        if item in seen:
+            continue
+        seen.add(item)
+        consumers.append(item)
+    return consumers
+
+
 def _resolve_host(plugin_id: str) -> PluginDispatchHostContract:
     hosts_snapshot = state.get_plugin_hosts_snapshot_cached(timeout=1.0)
     host_obj = hosts_snapshot.get(plugin_id)
@@ -69,6 +90,83 @@ def _normalize_args(raw_args: object) -> dict[str, object]:
 
 
 class PluginDispatchService:
+    async def dispatch_message(
+        self,
+        *,
+        args: object,
+        timeout: float,
+    ) -> dict[str, object]:
+        if (
+            isinstance(timeout, bool)
+            or not isinstance(timeout, (int, float))
+            or not math.isfinite(float(timeout))
+            or float(timeout) <= 0
+        ):
+            raise ServerDomainError(
+                code="INVALID_ARGUMENT",
+                message="timeout must be a positive finite number",
+                status_code=400,
+                details={},
+            )
+
+        consumers = await asyncio.to_thread(_iter_message_consumers)
+        normalized_args = _normalize_args(args)
+        results: list[dict[str, object]] = []
+
+        async def _dispatch_one(plugin_id: str, event_id: str) -> None:
+            try:
+                host = await asyncio.to_thread(_resolve_host, plugin_id)
+                health = await asyncio.to_thread(host.health_check)
+                if not bool(health.alive):
+                    results.append(
+                        {
+                            "plugin_id": plugin_id,
+                            "event_id": event_id,
+                            "success": False,
+                            "error": "plugin process is not alive",
+                        }
+                    )
+                    return
+                data = await host.trigger_custom_event(
+                    event_type="message",
+                    event_id=event_id,
+                    args=normalized_args,
+                    timeout=float(timeout),
+                )
+                results.append(
+                    {
+                        "plugin_id": plugin_id,
+                        "event_id": event_id,
+                        "success": True,
+                        "data": data,
+                    }
+                )
+            except Exception as exc:  # pragma: no cover - defensive fanout
+                logger.debug(
+                    "dispatch_message consumer failed: plugin_id={}, event_id={}, err_type={}, err={}",
+                    plugin_id,
+                    event_id,
+                    type(exc).__name__,
+                    str(exc),
+                )
+                results.append(
+                    {
+                        "plugin_id": plugin_id,
+                        "event_id": event_id,
+                        "success": False,
+                        "error": str(exc),
+                    }
+                )
+
+        await asyncio.gather(*(_dispatch_one(plugin_id, event_id) for plugin_id, event_id in consumers))
+        delivered = sum(1 for item in results if item.get("success"))
+        return {
+            "success": True,
+            "consumer_count": len(consumers),
+            "delivered_count": delivered,
+            "results": results,
+        }
+
     async def trigger_custom_event(
         self,
         *,

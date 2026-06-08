@@ -35,6 +35,7 @@ from __future__ import annotations
 _INSTALLED: dict[str, bool] = {
     "config_runtime": False,
     "user_directives_sink": False,
+    "user_plugin_message_bridge": False,
 }
 
 
@@ -148,4 +149,35 @@ def install_runtime_bindings() -> None:
                     # Logger 本身不可用（极早期 import / 配置坏）；同
                     # config_runtime block 的策略——咽掉避免 startup 二次崩，
                     # caller (app/__init__) 已经印过 stderr 面包屑。
+                    pass
+
+    # ---- main_logic.agent_event_bus → user plugin @message consumers -------
+    if not _INSTALLED["user_plugin_message_bridge"]:
+        try:
+            from main_logic.agent_event_bus import register_text_user_message_hook
+            from main_logic.user_plugin_message_bridge import dispatch_user_text_to_plugin_messages
+            register_text_user_message_hook(dispatch_user_text_to_plugin_messages)
+            _INSTALLED["user_plugin_message_bridge"] = True
+        except Exception as exc:
+            _expected_absent = {
+                "config",
+                "main_logic",
+                "main_logic.agent_event_bus",
+                "main_logic.user_plugin_message_bridge",
+                "utils",
+                "utils.logger_config",
+            }
+            _is_expected_absent = (
+                isinstance(exc, ModuleNotFoundError)
+                and getattr(exc, "name", None) in _expected_absent
+            )
+            if not _is_expected_absent:
+                try:
+                    from utils.logger_config import get_module_logger
+                    get_module_logger(__name__, "App").warning(
+                        "install_runtime_bindings(user_plugin_message_bridge) "
+                        "failed unexpectedly",
+                        exc_info=True,
+                    )
+                except Exception:
                     pass
